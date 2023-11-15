@@ -75,13 +75,7 @@ app.get('/integrate/slack', async (req, res) => {
             code: req.query.code,
         });
 
-        console.log(response)
-
-        const identity = await client.users.identity({
-            token: response.authed_user.access_token
-        });
-
-        res.status(200).json({ identity });
+        res.status(200).json({ access_token: response.access_token, user_id: req.query.user_id });
     }
     catch (error) {
         res.status(500).json({ error: error });
