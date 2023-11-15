@@ -11,6 +11,7 @@ const env_file = resolve(__dirname, './.env');
 require('dotenv').config({ path: env_file });
 
 const middleware = require('./auth/middleware')
+const { addSlackIntegration } = require('./auth/functions')
 
 const app = express();
 app.use(express.json());
@@ -75,10 +76,11 @@ app.get('/integrate/slack', async (req, res) => {
             code: req.query.code,
         });
 
-        res.status(200).json({ access_token: response.access_token, user_id: req.query.user_id });
+        await addSlackIntegration(req.query.state, response.access_token)
+        res.status(200).send("<script>window.close()</script>");
     }
     catch (error) {
-        res.status(500).json({ error: error });
+        res.status(500).send('Something went wrong. Try again later.');
     }
 })
 
