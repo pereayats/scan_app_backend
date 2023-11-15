@@ -3,6 +3,9 @@ const { resolve } = require('path');
 const fileUpload = require('express-fileupload');
 const vision = require('@google-cloud/vision');
 const algoliaearch = require('algoliasearch');
+const { WebClient } = require('@slack/web-api');
+
+const client = new WebClient();
 
 const env_file = resolve(__dirname, './.env');
 require('dotenv').config({ path: env_file });
@@ -15,7 +18,7 @@ app.use(fileUpload());
 
 const port = 3000;
 
-app.use('/', middleware);
+app.use('/scan', middleware);
 
 app.post('/scan', async (req, res) => {
     console.log('hello')
@@ -31,7 +34,7 @@ app.post('/scan', async (req, res) => {
             visionClient = new vision.ImageAnnotatorClient({ credentials: vision_credentials });
 
             // Trying to read the text from the package label
-            const [result] = await visionClient.textDetection({ image: { content: image.data }});
+            const [result] = await visionClient.textDetection({ image: { content: image.data } });
             const labelText = result && result.textAnnotations.length > 0 ? result.textAnnotations[0].description : null;
 
             console.log(labelText)
@@ -56,12 +59,31 @@ app.post('/scan', async (req, res) => {
             }
             else res.status(400).json({ error: 'No employee was found' });
         }
-        catch(error) {
+        catch (error) {
             console.log(error)
             res.status(400).json({ error: error.message });
         }
     }
     else res.status(400).json({ error: "Missing image" });
 });
+
+app.get('/integrate/slack', async (req, res) => {
+    try {
+        const response = await client.oauth.v2.access({
+            client_id: process.env.SLACK_CLIENT_ID,
+            client_secret: process.env.SLACK_CLIENT_SECRET,
+            code: req.query.code,
+        });
+
+        const identity = await client.users.identity({
+            token: response.authed_user.access_token
+        });
+
+        res.status(200).json({ identity });
+    }
+    catch (error) {
+        res.status(500).json({ error: error });
+    }
+})
 
 app.listen(port, () => console.log(`Server listening on port ${port}`));
