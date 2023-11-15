@@ -77,7 +77,7 @@ app.get('/integrate/slack', async (req, res) => {
         });
 
         await addSlackIntegration(req.query.state, response.access_token)
-        res.status(200).send("<script>window.close()</script>");
+        res.status(200).send('Integration successful. Go back to the app.');
     }
     catch (error) {
         res.status(500).send('Something went wrong. Try again later.');
