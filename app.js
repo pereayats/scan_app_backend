@@ -4,6 +4,7 @@ const fileUpload = require('express-fileupload');
 const vision = require('@google-cloud/vision');
 const algoliaearch = require('algoliasearch');
 const { WebClient } = require('@slack/web-api');
+const nodemailer = require('nodemailer');
 
 const client = new WebClient();
 
@@ -19,7 +20,19 @@ app.use(fileUpload());
 
 const port = 3000;
 
+const transporter = nodemailer.createTransport({
+    service: process.env.EMAIL_SERVICE,
+    host: process.env.EMAIL_HOST,
+    port: process.env.EMAIL_PORT,
+    secure: process.env.EMAIL_SECURE,
+    auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASSWORD,
+    },
+});
+
 app.use('/scan', middleware);
+app.use('/notify', middleware);
 
 app.post('/scan', async (req, res) => {
     console.log('hello')
@@ -81,6 +94,26 @@ app.get('/integrate/slack', async (req, res) => {
     }
     catch (error) {
         res.status(500).send('Something went wrong. Try again later.');
+    }
+})
+
+app.post('/notify/email', async (req, res) => {
+    let message = "A package has arrived for you and is waiting at the front office."
+    if (req?.body?.message) message = req?.body?.message
+
+    const options = {
+        from: `Scan App <${process.env.EMAIL_USER}>`,
+        to: req.body.to,
+        subject: "A package has arrived",
+        text: message
+    }
+
+    try {
+        const info = await transporter.sendMail(options)
+        res.status(200).json({ success: true })
+    }
+    catch (error) {
+        res.status(400).json({ error: error })
     }
 })
 
