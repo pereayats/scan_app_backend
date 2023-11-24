@@ -12,7 +12,7 @@ const env_file = resolve(__dirname, './.env');
 require('dotenv').config({ path: env_file });
 
 const middleware = require('./auth/middleware')
-const { addSlackIntegration } = require('./auth/functions')
+const { addSlackIntegration, createNewUser } = require('./auth/functions')
 
 const app = express();
 app.use(express.json());
@@ -32,6 +32,7 @@ const transporter = nodemailer.createTransport({
 });
 
 app.use('/scan', middleware);
+app.use('/create-admin', middleware);
 app.use('/notify', middleware);
 
 app.post('/scan', async (req, res) => {
@@ -80,6 +81,36 @@ app.post('/scan', async (req, res) => {
     }
     else res.status(400).json({ error: "Missing image" });
 });
+
+app.post('/create-admin', async (req, res) => {
+    const displayName = req?.body?.displayName
+    const email = req?.body?.email
+    const password = req?.body?.password
+
+    if (displayName && email && password) {
+        createNewUser(displayName, email, password, (error, user_id) => {
+            if (error) res.status(400).json({ error: error })
+            else {
+                let message = `You have been invited to manage some locations on Scan App. Here are your credentials:\n\n`;
+                message += `email: ${email}\npassword: ${password}`
+
+                const options = {
+                    from: `Scan App <${process.env.EMAIL_USER}>`,
+                    to: email,
+                    subject: "Scan App Admin",
+                    text: message
+                }
+
+                transporter.sendMail(options).then(info => {
+                    res.status(200).json({ user_id: user_id });
+                }).catch(error => {
+                    res.status(400).json({ error: error })
+                })
+            }
+        })
+    }
+    else res.status(400).json({ error: 'Missing Parameters' })
+})
 
 app.get('/integrate/slack', async (req, res) => {
     try {

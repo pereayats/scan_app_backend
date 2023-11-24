@@ -13,6 +13,15 @@ async function addSlackIntegration(user_id, access_token) {
     }
 }
 
+function createNewUser(displayName, email, password, callback) {
+    firebase.auth().createUser({ email, password, displayName, emailVerified: true }).then(newUser => {
+        callback(null, newUser?.uid)
+    }).catch(error => {
+        callback(error)
+    })
+}
+
 module.exports = {
-    addSlackIntegration: addSlackIntegration
+    addSlackIntegration: addSlackIntegration,
+    createNewUser: createNewUser
 }
